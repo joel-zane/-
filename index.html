@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>老照片修复工作台 · Photo Restoration Lab</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-mark">Argentum</span>
+    <span class="logo-sub">Photo Restoration Lab · 老照片修复工作台</span>
+  </div>
+  <div class="header-meta">
+    <div id="statusDot" class="status-dot"></div>
+    <span id="statusText">等待上传图像</span>
+    <span>·</span>
+    <span id="imageDims">—</span>
+  </div>
+</header>
+
+<div class="workspace">
+  <aside class="sidebar">
+
+    <div class="sidebar-section">
+      <div class="section-label">图像输入</div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
+        <div class="upload-icon">🎞</div>
+        <div class="upload-text">
+          <strong>拖拽或点击</strong> 上传照片<br>
+          支持 JPG · PNG · WEBP
+        </div>
+      </div>
+      <div style="margin-top:8px; display:flex; gap:6px;">
+        <button class="btn btn-danger" id="btnReset" disabled style="flex:1;">
+          <span class="btn-icon">↺</span> 重置
+        </button>
+        <button class="btn btn-primary" id="btnDownload" disabled style="flex:1;">
+          <span class="btn-icon">⬇</span> 下载
+        </button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">智能修复</div>
+      <button class="btn btn-primary" id="btnAutoFix" disabled>
+        <span class="btn-icon">✦</span> 一键自动修复
+        <span class="btn-info">AUTO</span>
+      </button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">空间域 · 对比度增强</div>
+      <button class="btn" id="btnHE" disabled>
+        <span class="btn-icon">◧</span> 直方图均衡化
+        <span class="btn-info">HE</span>
+      </button>
+      <button class="btn" id="btnCLAHE" disabled>
+        <span class="btn-icon">◨</span> 自适应均衡化 CLAHE
+        <span class="btn-info">CLAHE</span>
+      </button>
+      <div class="slider-group" style="margin-top:8px;">
+        <div class="slider-label">CLAHE 块大小 <span id="claheTileVal">8</span></div>
+        <input type="range" id="claheTile" min="4" max="32" step="4" value="8">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">CLAHE 对比度限制 <span id="claheClipVal">3.0</span></div>
+        <input type="range" id="claheClip" min="1" max="8" step="0.5" value="3">
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">空间域 · 去噪</div>
+      <button class="btn" id="btnMedian" disabled>
+        <span class="btn-icon">◈</span> 中值滤波（椒盐噪声）
+        <span class="btn-info">MED</span>
+      </button>
+      <button class="btn" id="btnGaussian" disabled>
+        <span class="btn-icon">◉</span> 高斯滤波（高斯噪声）
+        <span class="btn-info">GSS</span>
+      </button>
+      <div class="slider-group" style="margin-top:8px;">
+        <div class="slider-label">核大小 <span id="kernelVal">3</span>×<span id="kernelVal2">3</span></div>
+        <input type="range" id="kernelSize" min="3" max="11" step="2" value="3">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label">高斯 σ <span id="sigmaVal">1.0</span></div>
+        <input type="range" id="gaussSigma" min="0.5" max="5" step="0.5" value="1">
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">空间域 · 锐化</div>
+      <button class="btn" id="btnLaplacian" disabled>
+        <span class="btn-icon">△</span> 拉普拉斯锐化
+        <span class="btn-info">LAP</span>
+      </button>
+      <button class="btn" id="btnUnsharp" disabled>
+        <span class="btn-icon">◇</span> USM 反锐化掩蔽
+        <span class="btn-info">USM</span>
+      </button>
+      <div class="slider-group" style="margin-top:8px;">
+        <div class="slider-label">锐化强度 <span id="sharpenVal">1.0</span></div>
+        <input type="range" id="sharpenAmount" min="0.5" max="3" step="0.5" value="1">
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">频域 · 滤波</div>
+      <select id="fftFilterType">
+        <option value="ideal">理想低通滤波器</option>
+        <option value="gaussian" selected>高斯低通滤波器</option>
+        <option value="butterworth">巴特沃斯滤波器</option>
+      </select>
+      <div class="slider-group">
+        <div class="slider-label">截止频率 D₀ <span id="cutoffVal">60</span></div>
+        <input type="range" id="fftCutoff" min="10" max="150" step="5" value="60">
+      </div>
+      <button class="btn" id="btnFFTLow" disabled>
+        <span class="btn-icon">〜</span> 频域低通滤波
+        <span class="btn-info">FFT</span>
+      </button>
+      <button class="btn" id="btnShowSpectrum" disabled>
+        <span class="btn-icon">⬡</span> 显示频谱图
+        <span class="btn-info">SPEC</span>
+      </button>
+      <button class="btn" id="btnNotch" disabled>
+        <span class="btn-icon">⊗</span> 陷波去网纹（点击频谱）
+        <span class="btn-info">NOTCH</span>
+      </button>
+      <div class="notch-list" id="notchList"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">高级增强</div>
+      <button class="btn" id="btnHomomorphic" disabled>
+        <span class="btn-icon">☀</span> 同态滤波（光照均衡）
+        <span class="btn-info">HOM</span>
+      </button>
+      <button class="btn" id="btnRetinex" disabled>
+        <span class="btn-icon">◌</span> Retinex 增强
+        <span class="btn-info">RTX</span>
+      </button>
+      <div class="slider-group" style="margin-top:8px;">
+        <div class="slider-label">Retinex σ <span id="retinexSigmaVal">80</span></div>
+        <input type="range" id="retinexSigma" min="20" max="200" step="10" value="80">
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">量化评估</div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value" id="metricPSNR">—</div>
+          <div class="metric-label">PSNR (dB)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" id="metricEntropy">—</div>
+          <div class="metric-label">信息熵</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" id="metricContrast">—</div>
+          <div class="metric-label">对比度</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" id="metricSharpness">—</div>
+          <div class="metric-label">清晰度</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section" style="flex:1;">
+      <div class="section-label">操作历史</div>
+      <div class="history-list" id="historyList">
+        <div style="font-size:11px; color:var(--text-muted); text-align:center; padding:12px;">
+          暂无操作记录
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <main class="main-content">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <div class="canvas-area">
+      <div class="canvas-pane">
+        <div class="pane-header">
+          <div class="pane-title">
+            <span class="pane-badge badge-original">ORIGINAL</span>
+            原始图像
+          </div>
+        </div>
+        <div class="canvas-wrapper" id="originalWrapper">
+          <div class="empty-state" id="emptyStateOrig">
+            <div class="empty-icon">🎞</div>
+            <div class="empty-text">上传照片以开始修复</div>
+          </div>
+          <canvas id="originalCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="canvas-pane">
+        <div class="pane-header">
+          <div class="pane-title">
+            <span class="pane-badge badge-processed">PROCESSED</span>
+            修复结果
+          </div>
+          <div id="currentOpLabel" style="font-size:10px; color:var(--accent);">—</div>
+        </div>
+        <div class="canvas-wrapper" id="processedWrapper">
+          <div class="empty-state" id="emptyStateProc">
+            <div class="empty-icon">✦</div>
+            <div class="empty-text">选择修复算法</div>
+          </div>
+          <canvas id="processedCanvas"></canvas>
+
+          <div class="spectrum-overlay" id="spectrumOverlay">
+            <div style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">
+              频谱图 · 点击添加陷波滤波器
+            </div>
+            <canvas id="spectrumCanvas"></canvas>
+            <div class="spectrum-controls">
+              <button class="btn" id="btnApplyNotch" style="width:auto; padding:6px 14px;">
+                <span class="btn-icon">⊗</span> 应用陷波滤波
+              </button>
+              <button class="btn" id="btnClearNotch" style="width:auto; padding:6px 14px;">
+                清除陷波点
+              </button>
+              <button class="btn" id="btnCloseSpectrum" style="width:auto; padding:6px 14px;">
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div id="statusMsg">就绪</div>
+      <div class="status-ops" id="appliedOps"></div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<canvas id="workCanvas" style="display:none;"></canvas>
+
+<script src="script.js"></script>
+</body>
+</html>
